@@ -194,34 +194,54 @@ function resetQuestionTimer() { state.questionStartTime = Date.now(); }
 function getQuestionTime() { return Math.floor((Date.now() - state.questionStartTime) / 1000); }
 
 // ===== AUTO-GENERATE PRESETS =====
-// Generates smart quiz size options based on total question count
-// Uses preferred "nice" numbers: 10, 25, 50, 100
-// Falls back to smaller tiers for small question banks
+// Generates smart quiz size options: 10, 25, 50 (no 100/All — use custom for those)
 function generatePresets(total) {
-  if (total <= 5) return []; // too few for presets
-  const icons = ['🎯', '⚡', '🔥', '💪'];
-  // Preferred tiers in order of priority (most common quiz sizes)
-  const tiers = [
-    [10, 25, 50, 100],   // for 150+ questions
-    [10, 25, 50],         // for 75-149
-    [10, 25],             // for 40-74
-    [10],                 // for 15-39
-    [5],                  // for 6-14
-  ];
-  // Pick the best tier: all values must be strictly < total
-  let selected = [];
-  for (const tier of tiers) {
-    const valid = tier.filter(n => n < total && n <= total * 0.7);
-    if (valid.length > 0) {
-      selected = valid;
-      break;
-    }
-  }
-  return selected.map((n, i) => ({
+  if (total <= 5) return [];
+  const icons = ['🎯', '⚡', '🔥'];
+  const preferred = [10, 25, 50];
+  const valid = preferred.filter(n => n < total && n <= total * 0.7);
+  return valid.map((n, i) => ({
     count: n,
     icon: icons[i] || '📋',
-    label: n >= 100 ? `${n} Questions` : `Quick ${n}`
+    label: `Quick ${n}`
   }));
+}
+
+// ===== TIER-BASED QUIZ =====
+// Get unique tiers from question data, sorted by priority
+function getAvailableTiers(courseId) {
+  const allQ = QUESTIONS[courseId] || [];
+  const tierSet = new Set(allQ.map(q => q.tier).filter(Boolean));
+  const sorted = [...tierSet].sort(); // alphabetical = Tier 1, Tier 2, etc.
+  return sorted;
+}
+
+function startTierQuiz(tierLabel) {
+  const allQ = QUESTIONS[state.course] || [];
+  const filtered = allQ.filter(q => q.tier === tierLabel);
+  if (filtered.length === 0) return;
+
+  const shuffleToggle = document.getElementById('shuffle-toggle');
+  const shouldShuffle = shuffleToggle ? shuffleToggle.checked : true;
+
+  state.questions = shouldShuffle ? shuffle(filtered) : [...filtered];
+  state.currentIndex = 0;
+  state.score = 0;
+  state.answered = 0;
+  state.answers = [];
+  const total = state.questions.length;
+  document.getElementById('header-title').textContent = `${getCourseTitle(state.course)} · ${tierLabel} (${total})`;
+
+  const formulaBtn = document.getElementById('formula-btn');
+  if (formulaBtn) {
+    const showFormulas = CONFIG.showFormulas !== false;
+    const hasFormulas = FORMULAS[state.course] && FORMULAS[state.course].length > 0;
+    formulaBtn.style.display = (showFormulas && hasFormulas) ? 'inline-block' : 'none';
+  }
+
+  showScreen('screen-quiz');
+  startTimer();
+  renderQuestion();
 }
 
 // ===== COURSE SELECTION =====
@@ -244,12 +264,27 @@ function selectCourse(courseId) {
     btn.onclick = () => startQuiz(preset.count);
     container.appendChild(btn);
   });
-  // "All" button — always shown
-  const allBtn = document.createElement('button');
-  allBtn.className = 'mode-btn';
-  allBtn.textContent = `📋 All ${qCount} Questions`;
-  allBtn.onclick = () => startQuiz(qCount);
-  container.appendChild(allBtn);
+
+  // Tier-based buttons
+  const tiers = getAvailableTiers(courseId);
+  if (tiers.length > 0) {
+    const tierDivider = document.createElement('div');
+    tierDivider.className = 'mode-divider';
+    tierDivider.textContent = 'By Exam Probability';
+    container.appendChild(tierDivider);
+
+    const tierIcons = ['🏆', '⭐', '📊', '📝'];
+    const allQ = QUESTIONS[courseId] || [];
+    tiers.forEach((tier, i) => {
+      const count = allQ.filter(q => q.tier === tier).length;
+      const shortLabel = tier.replace(/^Tier \d+ — /, '');
+      const btn = document.createElement('button');
+      btn.className = 'mode-btn' + (i === 0 ? '' : ' secondary');
+      btn.textContent = `${tierIcons[i] || '📋'} ${shortLabel} (${count}q)`;
+      btn.onclick = () => startTierQuiz(tier);
+      container.appendChild(btn);
+    });
+  }
 
   // Shuffle toggle — only show if course config enables it (default true)
   const courseConfig = getCourseConfig(courseId);

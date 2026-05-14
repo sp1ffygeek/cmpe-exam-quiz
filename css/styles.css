@@ -207,6 +207,19 @@ body {
   border: 2px solid var(--border);
 }
 .mode-btn.secondary:hover { border-color: var(--accent); }
+/* Mode section divider */
+.mode-divider {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+  margin: 16px 0 8px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
 .back-link {
   display: inline-block;
   margin-top: 16px;
