@@ -11,6 +11,7 @@
       "description": "Modules 9–17 · TRPO, PPO, DDPG, SAC, A3C & more",
       "questionFile": "data/cmpe260.json",
       "formulaFile": "data/formulas-cmpe260.json",
+      "enableShuffle": true,
       "studyGuides": [
         { "id": "all", "file": "guides/cmpe260/overview.md", "label": "📋 All Modules (Overview)" },
         { "id": "m09", "file": "guides/cmpe260/m09-policy-gradient.md", "label": "M09 · Policy Gradient" },
@@ -28,6 +29,7 @@
       "description": "CF, MF, Deep Learning, Fairness, Bandits & more",
       "questionFile": "data/cmpe256.json",
       "formulaFile": "data/formulas-cmpe256.json",
+      "enableShuffle": true,
       "studyGuides": [
         { "id": "all", "file": "guides/cmpe256/overview.md", "label": "📋 All Modules (Overview)" },
         { "id": "m1", "file": "guides/cmpe256/m1-similarity-evaluation.md", "label": "M1 · Similarity & Evaluation" },
@@ -39,10 +41,5 @@
       ]
     }
   ],
-  "quizPresets": [
-    { "count": 10, "icon": "🎯", "label": "Quick 10" },
-    { "count": 25, "icon": "⚡", "label": "Quick 25" },
-    { "count": 50, "icon": "🔥", "label": "Quick 50" },
-    { "count": 100, "icon": "💪", "label": "100 Questions" }
-  ]
+  "quizPresetStrategy": "auto"
 }

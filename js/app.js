@@ -186,6 +186,34 @@ function stopTimer() {
 function resetQuestionTimer() { state.questionStartTime = Date.now(); }
 function getQuestionTime() { return Math.floor((Date.now() - state.questionStartTime) / 1000); }
 
+// ===== AUTO-GENERATE PRESETS =====
+// Generates smart quiz size options based on total question count
+// Rules: pick ~3-4 nice round numbers that are well-spaced and < total
+function generatePresets(total) {
+  if (total <= 5) return []; // too few for presets
+  const icons = ['🎯', '⚡', '🔥', '💪', '📊'];
+  const candidates = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150];
+  // Filter: must be < total AND at least 30% less than total (avoid near-duplicates of "All")
+  const threshold = Math.floor(total * 0.7);
+  const valid = candidates.filter(n => n < total && n <= threshold);
+  // Pick up to 4 well-spaced presets
+  let selected = [];
+  if (valid.length <= 4) {
+    selected = valid;
+  } else {
+    // Pick evenly spaced from valid list
+    const step = (valid.length - 1) / 3;
+    for (let i = 0; i < 4; i++) {
+      selected.push(valid[Math.round(i * step)]);
+    }
+  }
+  return selected.map((n, i) => ({
+    count: n,
+    icon: icons[i] || '📋',
+    label: n >= 100 ? `${n} Questions` : `Quick ${n}`
+  }));
+}
+
 // ===== COURSE SELECTION =====
 function selectCourse(courseId) {
   state.course = courseId;
@@ -195,25 +223,40 @@ function selectCourse(courseId) {
   document.getElementById('mode-subtitle').textContent = qCount + ' questions available';
   document.getElementById('header-title').textContent = courseTitle;
 
-  // Dynamically generate mode buttons from config presets
-  // Only show presets that are strictly less than total question count
+  // Auto-generate smart presets based on question count
   const container = document.getElementById('mode-buttons');
   container.innerHTML = '';
-  const presets = CONFIG.quizPresets || [];
-  const shownPresets = presets.filter(p => p.count < qCount);
-  shownPresets.forEach(preset => {
+  const presets = generatePresets(qCount);
+  presets.forEach(preset => {
     const btn = document.createElement('button');
     btn.className = 'mode-btn secondary';
-    btn.textContent = `${preset.icon} ${preset.label} (Random)`;
+    btn.textContent = `${preset.icon} ${preset.label}`;
     btn.onclick = () => startQuiz(preset.count);
     container.appendChild(btn);
   });
   // "All" button — always shown
   const allBtn = document.createElement('button');
   allBtn.className = 'mode-btn';
-  allBtn.textContent = `📋 All ${qCount} Questions (Shuffled)`;
+  allBtn.textContent = `📋 All ${qCount} Questions`;
   allBtn.onclick = () => startQuiz(qCount);
   container.appendChild(allBtn);
+
+  // Shuffle toggle — only show if course config enables it (default true)
+  const courseConfig = getCourseConfig(courseId);
+  const shuffleEnabled = courseConfig && courseConfig.enableShuffle !== false;
+  if (shuffleEnabled) {
+    const toggleDiv = document.createElement('div');
+    toggleDiv.className = 'shuffle-toggle';
+    toggleDiv.innerHTML = `
+      <label class="toggle-label">
+        <input type="checkbox" id="shuffle-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-text">Shuffle question order</span>
+    `;
+    container.appendChild(toggleDiv);
+  }
+
   // "Custom Random" input — only if there are enough questions to make it useful
   if (qCount > 10) {
     const defaultCustom = Math.min(30, Math.floor(qCount / 2));
@@ -246,8 +289,28 @@ function shuffle(arr) {
 function startQuiz(count) {
   const allQ = QUESTIONS[state.course];
   if (!allQ || allQ.length === 0) return;
-  const shuffled = shuffle(allQ);
-  state.questions = shuffled.slice(0, Math.min(count, shuffled.length));
+
+  // Check shuffle toggle (default: shuffled)
+  const shuffleToggle = document.getElementById('shuffle-toggle');
+  const shouldShuffle = shuffleToggle ? shuffleToggle.checked : true;
+
+  let selected;
+  if (shouldShuffle) {
+    // Shuffle then take first N
+    selected = shuffle(allQ).slice(0, Math.min(count, allQ.length));
+  } else {
+    // Pick random N but keep original order (sort by question number)
+    if (count >= allQ.length) {
+      selected = [...allQ]; // all questions in original order
+    } else {
+      // Randomly select N indices, then sort them to preserve order
+      const indices = shuffle([...Array(allQ.length).keys()]).slice(0, count);
+      indices.sort((a, b) => a - b);
+      selected = indices.map(i => allQ[i]);
+    }
+  }
+
+  state.questions = selected;
   state.currentIndex = 0;
   state.score = 0;
   state.answered = 0;
