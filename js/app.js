@@ -7,16 +7,23 @@ let FORMULAS = {};
 async function loadConfig() {
   try {
     const resp = await fetch('data/config.json');
-    if (!resp.ok) throw new Error('Failed to load config.json');
+    if (!resp.ok) throw new Error('Failed to load config.json (HTTP ' + resp.status + ')');
     CONFIG = await resp.json();
     console.log('⚙️ Config loaded:', CONFIG.title);
-    renderCourseSelection();
-    await Promise.all([loadQuestions(), loadFormulas()]);
+    try {
+      renderCourseSelection();
+    } catch (renderErr) {
+      console.error('renderCourseSelection error:', renderErr);
+      throw renderErr;
+    }
+    // Load questions and formulas in parallel (non-blocking)
+    Promise.all([loadQuestions(), loadFormulas()]).catch(e => console.warn('Data load warning:', e));
   } catch (err) {
     console.error('Failed to load config:', err);
+    document.getElementById('header-title').textContent = '⚠️ Error';
     document.getElementById('screen-course').innerHTML = `
       <div class="card" style="text-align:center;padding:40px">
-        <h2>⚠️ Failed to load configuration</h2>
+        <h2>⚠️ Failed to load</h2>
         <p style="color:var(--text2);margin-top:12px">Make sure <code>data/config.json</code> exists.<br>
         This app must be served via HTTP (not file://).</p>
         <p style="color:var(--wrong);margin-top:8px;font-size:0.85rem">${err.message}</p>
