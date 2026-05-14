@@ -567,9 +567,31 @@ let state = {
 
 // ===== THEME =====
 function initTheme() {
+  // Check system preference if no saved preference
+  if (!localStorage.getItem('quiz-theme')) {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      state.theme = 'dark';
+    }
+  }
   if (state.theme === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.querySelector('.theme-toggle').textContent = '☀️';
+  }
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('quiz-theme')) {
+      state.theme = e.matches ? 'dark' : 'light';
+      applyTheme();
+    }
+  });
+}
+function applyTheme() {
+  if (state.theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.querySelector('.theme-toggle').textContent = '☀️';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.querySelector('.theme-toggle').textContent = '🌙';
   }
 }
 function toggleTheme() {
