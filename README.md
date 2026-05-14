@@ -57,4 +57,3 @@ python3 build_html.py
 - **HTML/CSS/JS** — vanilla, no frameworks
 - **MathJax 3** — CDN-loaded for LaTeX `$$...$$` rendering
 - **LocalStorage** — persists dark/light mode preference
-
